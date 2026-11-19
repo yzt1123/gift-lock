@@ -133,6 +133,10 @@
   .origu{margin:6px 0 0;max-width:100%;font-size:9.5px;line-height:1.65;letter-spacing:0;
     color:#5f554e;word-break:break-all;text-align:center;
     -webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+  .again{margin:10px 0 4px;padding:8px 2px;background:none;border:0;border-bottom:1px solid rgba(139,124,114,.26);
+    font-family:inherit;font-size:12px;letter-spacing:.16em;text-indent:.16em;color:#9c8c7f;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .25s,border-color .25s}
+  .again:active{color:#d9b887;border-bottom-color:rgba(215,164,95,.55)}
 </style>
 </head>
 <body>
@@ -181,6 +185,7 @@
       <span class="dl-s">点这里下载 · 微信里长按可复制下面那串</span>
     </a>
     <p class="origu" id="origu"></p>
+    <button class="again" id="again">回到刚开始的地方</button>
   </section>
 
 </div>
@@ -504,6 +509,22 @@ $("#start").addEventListener("click", () => {
   idx = 0;
   render();
   show("#s-quiz");
+});
+
+/* 回到刚开始的地方：清掉解锁标记，退回封面，题目和字幕重新来过 */
+$("#again").addEventListener("click", () => {
+  try { localStorage.removeItem(UNLOCK_KEY); } catch (e) {}
+  clearInterval(lyTick);
+  stopBGM();
+  $("#frame").classList.remove("revealed");
+  const sub = $("#sub");
+  sub.innerHTML = "";
+  sub.style.opacity = "1";
+  $("#film").classList.remove("on");
+  idx = 0;
+  paintSegs();
+  window.scrollTo(0, 0);
+  show("#s-intro");
 });
 
 /* 轻触字幕区，跳到下一句 */
