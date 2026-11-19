@@ -130,6 +130,9 @@
   .dl:active{background:rgba(215,164,95,.15)}
   .dl-t{font-size:13.5px;letter-spacing:.18em;text-indent:.18em;color:#edcfa2}
   .dl-s{font-size:10.5px;letter-spacing:.06em;color:#8b7c72}
+  .origu{margin:6px 0 0;max-width:100%;font-size:9.5px;line-height:1.65;letter-spacing:0;
+    color:#5f554e;word-break:break-all;text-align:center;
+    -webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 </style>
 </head>
 <body>
@@ -175,8 +178,9 @@
     <p class="cap">点一下，能放大，看得清字</p>
     <a class="dl" id="orig" href="#" target="_blank" rel="noopener">
       <span class="dl-t">原 图 · 180 MB</span>
-      <span class="dl-s">点这里下载 · 微信里请点右上角用浏览器打开</span>
+      <span class="dl-s">点这里下载 · 微信里长按可复制下面那串</span>
     </a>
+    <p class="origu" id="origu"></p>
   </section>
 
 </div>
@@ -291,6 +295,7 @@ const show = id => {
 let idx = 0;
 
 $("#orig").href = CAPTION_ORIG;
+$("#origu").textContent = CAPTION_ORIG;
 
 /* 提前把大图拉到缓存里，解锁那一下才不卡 */
 new Image().src = "art.jpg";
@@ -476,7 +481,23 @@ function unlock(){
   show("#s-done");
   const f = $("#frame");
   requestAnimationFrame(() => setTimeout(() => f.classList.add("revealed"), 80));
+  try { localStorage.setItem(UNLOCK_KEY, "1"); } catch (e) {}
 }
+
+/* 答过一次就记住：同一个浏览器再进来直接到图，前面全跳过
+   （想重来一遍就在地址后面加 ?reset） */
+const UNLOCK_KEY = "xiao-hui-unlocked";
+(function restore(){
+  if (/[?&]reset/.test(location.search)) {
+    try { localStorage.removeItem(UNLOCK_KEY); } catch (e) {}
+    return;
+  }
+  let done = false;
+  try { done = localStorage.getItem(UNLOCK_KEY) === "1"; } catch (e) {}
+  if (!done) return;
+  show("#s-done");
+  $("#frame").classList.add("revealed");
+})();
 
 $("#start").addEventListener("click", () => {
   if (document.fonts && document.fonts.load) document.fonts.load('20px "Hand"');
