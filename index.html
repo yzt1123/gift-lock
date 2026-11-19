@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0a09">
+<title>小灰和月亮布们</title>
+<style>
+  :root{
+    --ink:#f4ece2;
+    --dim:#9c8d82;
+    --gold:#d7a45f;
+    --line:rgba(244,236,226,.10);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%}
+  body{
+    background:#0c0a09;color:var(--ink);
+    font-family:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:grid;place-items:center;
+    min-height:100dvh;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom));
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";position:fixed;left:50%;top:-30vh;width:140vw;height:80vh;transform:translateX(-50%);
+    background:radial-gradient(50% 50% at 50% 50%,rgba(215,164,95,.14),rgba(215,164,95,0) 70%);
+    pointer-events:none;z-index:0;
+  }
+  .stage{width:100%;max-width:400px;position:relative;z-index:1}
+  .screen{display:none;flex-direction:column;gap:24px;animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+  .screen.on{display:flex}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  /* 封面 */
+  .lock{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:1200/841;background:#171310;
+    box-shadow:0 34px 60px -34px #000, 0 0 0 1px rgba(244,236,226,.07) inset}
+  .lock img{width:100%;height:100%;object-fit:cover;display:block;
+    filter:blur(34px) saturate(.95) brightness(.5) sepia(.15);transform:scale(1.18)}
+  .lock-mask{position:absolute;inset:0;display:grid;place-items:center;
+    background:radial-gradient(65% 65% at 50% 50%,rgba(12,10,9,.10),rgba(12,10,9,.62))}
+  .lock-mask svg{width:38px;height:38px;filter:drop-shadow(0 6px 18px rgba(0,0,0,.6))}
+  .lead{text-align:center;display:flex;flex-direction:column;gap:11px}
+  .lead h1{margin:0;font-size:25px;font-weight:600;letter-spacing:.3em;text-indent:.3em}
+  .lead p{margin:0;color:var(--dim);font-size:13.5px;letter-spacing:.12em}
+  .lead .note{margin-top:2px;color:#6f645c;font-size:11.5px;letter-spacing:.06em}
+
+  .btn{appearance:none;border:0;width:100%;padding:17px;border-radius:15px;
+    background:linear-gradient(180deg,#e4b677,#c8914f);color:#241a11;
+    font-size:15.5px;font-weight:700;letter-spacing:.22em;text-indent:.22em;
+    font-family:inherit;cursor:pointer;
+    box-shadow:0 14px 30px -14px rgba(215,164,95,.55);
+    transition:transform .12s,filter .2s}
+  .btn:active{transform:translateY(1px);filter:brightness(.96)}
+
+  /* 答题 */
+  .bar{display:flex;align-items:center;justify-content:space-between}
+  .step{font-size:12px;color:var(--dim);letter-spacing:.14em}
+  .segs{display:flex;gap:6px}
+  .seg{width:17px;height:3px;border-radius:2px;background:rgba(244,236,226,.16);transition:background .4s}
+  .seg.done{background:var(--gold)}
+  .q{margin:0;font-size:19px;line-height:1.66;font-weight:500;letter-spacing:.01em}
+  .opts{display:flex;flex-direction:column;gap:9px}
+  .opt{appearance:none;font-family:inherit;width:100%;text-align:left;cursor:pointer;
+    padding:13px 14px;border-radius:12px;font-size:14.5px;line-height:1.5;color:var(--ink);
+    background:rgba(244,236,226,.045);border:1px solid var(--line);
+    display:flex;align-items:flex-start;gap:10px;
+    transition:background .25s,border-color .25s,color .25s,opacity .35s}
+  .opt .k{flex:none;font-size:11px;color:#8b7c72;border:1px solid rgba(244,236,226,.14);
+    border-radius:5px;padding:1px 5px;min-width:20px;text-align:center;margin-top:2px;letter-spacing:.04em}
+  .opt.ok{background:rgba(215,164,95,.15);border-color:rgba(215,164,95,.7);color:#f7e0bd}
+  .opt.ok .k{color:#e6c391;border-color:rgba(215,164,95,.5)}
+  .opt.bad{border-color:rgba(196,92,72,.55);animation:shake .42s}
+  .opt.dead{opacity:.26;pointer-events:none}
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-6px)}
+    40%{transform:translateX(5px)}
+    60%{transform:translateX(-3px)}
+    80%{transform:translateX(2px)}
+  }
+
+  /* 字幕：一张白纸，字是一笔一笔写上去的 */
+  @font-face{font-family:"Hand";src:url(hand.ttf) format("truetype");font-display:swap}
+  .film{position:fixed;inset:0;z-index:60;background:#f7f2e7;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    opacity:0;pointer-events:none;transition:opacity .8s ease}
+  .film.on{opacity:1;pointer-events:auto}
+  .paper{position:absolute;inset:0;
+    background:radial-gradient(125% 95% at 20% 10%,#fffdf8,#f5eddd 58%,#ecdfc9 100%)}
+  .paper::after{content:"";position:absolute;inset:0;opacity:.55;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.3'/%3E%3C/svg%3E")}
+  .film::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+    box-shadow:inset 0 0 110px rgba(122,95,58,.16)}
+  .sub-wrap{position:relative;z-index:2;width:min(84vw,540px);text-align:left;padding:0 2px}
+  .sub{margin:0;font-family:"Hand","Kaiti SC",KaiTi,"STKaiti",serif;
+    font-size:clamp(22px,6.2vw,31px);line-height:1.95;letter-spacing:.05em;color:#2b2520;
+    text-shadow:0 1px 0 rgba(255,255,255,.55);transition:opacity .5s ease}
+  .ch{display:inline-block;opacity:0;filter:blur(4px);transform:translateY(4px);
+    transition:opacity .38s ease,filter .5s ease,transform .5s cubic-bezier(.2,.7,.2,1)}
+  .ch.on{opacity:1;filter:blur(0);transform:none}
+  .sub.small{font-size:clamp(17px,4.6vw,21px);color:#6f6559;letter-spacing:.04em}
+  .lyr{font-family:"Hand","Kaiti SC",KaiTi,serif;
+    position:absolute;left:0;right:0;top:100%;margin:16px 0 0;text-align:right;
+    font-size:clamp(13px,3.6vw,15px);letter-spacing:.14em;color:#a89c8b;opacity:0;
+    transition:opacity .7s ease;pointer-events:none}
+  .film-line{position:absolute;left:0;bottom:calc(6.5vh + 16px);height:1.5px;width:0;
+    background:linear-gradient(90deg,rgba(70,56,40,.05),rgba(70,56,40,.42));z-index:4}
+
+  /* 揭图 */
+  .tag{margin:0;text-align:center;font-size:11px;letter-spacing:.42em;text-indent:.42em;color:var(--gold)}
+  .frame{position:relative;display:block;border-radius:16px;overflow:hidden;background:#171310;
+    box-shadow:0 44px 80px -44px #000,0 0 0 1px rgba(244,236,226,.08) inset}
+  .frame img{display:block;width:100%;height:auto;
+    filter:blur(26px) brightness(.75) saturate(.85);transform:scale(1.07);
+    transition:filter 1.6s ease,transform 1.9s cubic-bezier(.2,.7,.2,1)}
+  .frame.revealed img{filter:none;transform:none}
+  .sheen{position:absolute;inset:0;pointer-events:none;opacity:0;
+    background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.14) 50%,transparent 65%);
+    background-size:260% 100%;background-position:120% 0}
+  .frame.revealed .sheen{opacity:1;animation:sweep 1.7s .3s ease-out both}
+  @keyframes sweep{from{background-position:120% 0}to{background-position:-40% 0}}
+  .cap{margin:0;text-align:center;font-size:12px;color:var(--dim);letter-spacing:.12em;line-height:1.9}
+  .cap a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(215,164,95,.35);padding-bottom:1px}
+  .dl{display:flex;flex-direction:column;align-items:center;gap:5px;width:100%;
+    padding:13px 16px;border-radius:13px;text-decoration:none;
+    border:1px solid rgba(215,164,95,.42);background:rgba(215,164,95,.07);
+    transition:background .25s,border-color .25s}
+  .dl:active{background:rgba(215,164,95,.15)}
+  .dl-t{font-size:13.5px;letter-spacing:.18em;text-indent:.18em;color:#edcfa2}
+  .dl-s{font-size:10.5px;letter-spacing:.06em;color:#8b7c72}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 封面 -->
+  <section class="screen on" id="s-intro">
+    <div class="lock">
+      <img src="small.jpg" alt="">
+      <div class="lock-mask">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#d7a45f" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4.5" y="10.5" width="15" height="10" rx="2.6"/>
+          <path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7"/>
+          <circle cx="12" cy="15.4" r="1.15" fill="#d7a45f" stroke="none"/>
+        </svg>
+      </div>
+    </div>
+    <div class="lead">
+      <h1>小灰与月亮布们</h1>
+      <p>答完，才给你看</p>
+      <p class="note">仅供娱乐，没有绝对的对错</p>
+    </div>
+    <button class="btn" id="start">开 始</button>
+  </section>
+
+  <!-- 答题 -->
+  <section class="screen" id="s-quiz">
+    <div class="bar">
+      <span class="step" id="step">第 1 / 5 题</span>
+      <div class="segs" id="segs"></div>
+    </div>
+    <h2 class="q" id="qtext"></h2>
+    <div class="opts" id="opts"></div>
+  </section>
+
+  <!-- 揭晓 -->
+  <section class="screen" id="s-done">
+    <p class="tag">解 锁 成 功</p>
+    <a class="frame" id="frame" href="art.jpg" target="_blank" rel="noopener">
+      <img src="art.jpg" alt="小灰和月亮布们">
+      <div class="sheen"></div>
+    </a>
+    <p class="cap">点一下，能放大，看得清字</p>
+    <a class="dl" id="orig" href="#" target="_blank" rel="noopener">
+      <span class="dl-t">原 图 · 180 MB</span>
+      <span class="dl-s">点这里下载 · 微信里请点右上角用浏览器打开</span>
+    </a>
+  </section>
+
+</div>
+
+<!-- 字幕 -->
+<div class="film" id="film">
+  <div class="paper"></div>
+  <div class="sub-wrap"><p class="sub" id="sub"></p><p class="lyr" id="lyr"></p></div>
+  <div class="film-line" id="fprog"></div>
+</div>
+<audio id="bgm" src="bgm.mp3" preload="auto" playsinline></audio>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   1. 题目
+   ══════════════════════════════════════════════════════════ */
+const QUESTIONS = [
+  {
+    q: "小灰的原型是什么（这能错？）",
+    options: [
+      { t: "小咪" },
+      { t: "霜白小垂耳兔的祷告人偶", ok: true },
+      { t: "嘴里养多肉的人" },
+      { t: "先天火锅圣体" }
+    ]
+  },
+  {
+    q: "小灰的粉丝们叫什么",
+    options: [
+      { t: "小穷鬼们" },
+      { t: "小咪们" },
+      { t: "月亮布们", ok: true },
+      { t: "想不出来了见谅（那咋了）" }
+    ]
+  },
+  {
+    q: "在外面鬼混的小咪们回来应该干什么？",
+    options: [
+      { t: "刷玫瑰并故意告诉灰引起注意", ok: true },
+      { t: "默默愧疚并刷多喝热水" },
+      { t: "对灰承诺再也不鬼混了" },
+      { t: "继续鬼混不回来了（慎重）" }
+    ]
+  },
+  {
+    q: "灰灰除了月亮布们最喜欢的是什么",
+    options: [
+      { t: "打PK" },
+      { t: "各种奶蛙视频", ok: true },
+      { t: "小助理" },
+      { t: "楼下火锅店" }
+    ]
+  },
+  {
+    q: "被灰灰发现出门鬼混的小咪们会怎么样",
+    options: [
+      { t: "毕业旅行说走就走" },
+      { t: "无事发生（我总不能阻止你找更好的人吧？）" },
+      { t: "被灰灰拷在地下室只能看灰一人（有点病娇了）" },
+      { t: "被灰灰残忍的剁成小咪酱", ok: true }
+    ]
+  }
+];
+
+/* ══════════════════════════════════════════════════════════
+   2. 字幕，一句一张卡。small:true 会显示成小字
+   ══════════════════════════════════════════════════════════ */
+const FILM = [
+  { t: "对不起啦灰灰" },
+  { t: "这件事，我们瞒了你挺久的" },
+  { t: "那几天看到直播间没人" },
+  { t: "我们都很难受" },
+  { t: "但是我们想让你知道" },
+  { t: "你对于我们月亮布来说" },
+  { t: "是很重要的" },
+  { t: "所以就选了一个略微有点特殊的方式" },
+  { t: "来告诉你" },
+  { t: "虽然晚了一点，但是希望来得及" },
+  { t: "所以我和鹿鸣樱桃私下决定了一下" },
+  { t: "希望你喜欢" },
+  { t: "也不再焦虑我们是不是不来看你了" },
+  { t: "这个答案，肯定是否啊" },
+  { t: "最后，樱桃、鹿鸣、贰叁" },
+  { t: "谨代表所有喜欢灰灰的人和月亮布们" },
+  { t: "送出这一份小小的心意" },
+  { t: "（这个23第一次弄，不好看的话别压力我...）", small: true }
+];
+
+const CAPTION_ORIG = "https://pan.baidu.com/"; // ← 换成 GitHub Release 里那个文件的直链
+
+/* ══════════════════════════════════════════════════════════
+   3. 背景乐歌词，t = 从 bgm.mp3 第 0 秒算起
+   ══════════════════════════════════════════════════════════ */
+const LYRICS = [
+  { t: 0.05,  x: "我们是对方 特别的人" },
+  { t: 6.65,  x: "奋不顾身 难舍难分" },
+  { t: 11.11, x: "不是一般人的认真" },
+  { t: 14.43, x: "若只有一天 爱一个人" },
+  { t: 20.79, x: "让那时间每一刻在倒退" },
+  { t: 25.43, x: "生命中有万事的可能" },
+  { t: 30.35, x: "你就是我要遇见的 特别的人" }
+];
+
+/* ══════════════════════════════════════════════════════════
+   以下不用动
+   ══════════════════════════════════════════════════════════ */
+const $ = s => document.querySelector(s);
+const show = id => {
+  document.querySelectorAll(".screen").forEach(e => e.classList.remove("on"));
+  $(id).classList.add("on");
+};
+let idx = 0;
+
+$("#orig").href = CAPTION_ORIG;
+
+/* 提前把大图拉到缓存里，解锁那一下才不卡 */
+new Image().src = "art.jpg";
+
+(function buildSegs(){
+  const box = $("#segs");
+  QUESTIONS.forEach(() => {
+    const d = document.createElement("i");
+    d.className = "seg";
+    box.appendChild(d);
+  });
+})();
+
+function paintSegs(){
+  document.querySelectorAll(".seg").forEach((s, i) => s.classList.toggle("done", i < idx));
+  $("#step").textContent = `第 ${idx + 1} / ${QUESTIONS.length} 题`;
+}
+
+function render(){
+  const q = QUESTIONS[idx];
+  paintSegs();
+  $("#qtext").textContent = q.q;
+  const box = $("#opts");
+  box.innerHTML = "";
+  const keys = "ABCD";
+  q.options.forEach((o, i) => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    const k = document.createElement("span");
+    k.className = "k";
+    k.textContent = keys[i];
+    const t = document.createElement("span");
+    t.textContent = o.t;
+    b.appendChild(k); b.appendChild(t);
+    b.addEventListener("click", () => pick(b, o));
+    box.appendChild(b);
+  });
+  window.scrollTo(0, 0);
+}
+
+function pick(btn, opt){
+  if (!opt.ok){
+    btn.classList.add("bad");
+    if (navigator.vibrate) navigator.vibrate(12);
+    setTimeout(() => { btn.classList.remove("bad"); btn.classList.add("dead"); }, 430);
+    return;
+  }
+  document.querySelectorAll(".opt").forEach(b => b.style.pointerEvents = "none");
+  btn.classList.add("ok");
+  if (navigator.vibrate) navigator.vibrate(8);
+
+  const last = idx === QUESTIONS.length - 1;
+  if (last) primeBGM();
+  setTimeout(() => {
+    if (last) playFilm();
+    else { idx++; render(); }
+  }, 640);
+}
+
+/* ── 背景乐 ── */
+const BGM = $("#bgm");
+const BGM_VOL = 0.62;
+let lyTick = null, lyClock = 0, bfade = null;
+
+/* 在点击手势里先静音播一下，手机才允许后面自动播放 */
+function primeBGM(){
+  BGM.muted = true;
+  const p = BGM.play();
+  const reset = () => { BGM.pause(); BGM.currentTime = 0; BGM.muted = false; };
+  if (p && p.then) p.then(reset).catch(() => { BGM.muted = false; });
+  else reset();
+}
+
+function startBGM(){
+  clearInterval(bfade);
+  BGM.currentTime = 0; BGM.volume = 0;
+  BGM.play().catch(() => {});
+  let v = 0;
+  bfade = setInterval(() => {
+    v = Math.min(BGM_VOL, v + BGM_VOL / 34);
+    BGM.volume = v;
+    if (v >= BGM_VOL) clearInterval(bfade);
+  }, 60);
+}
+
+function stopBGM(){
+  clearInterval(bfade);
+  const v0 = BGM.volume, t0 = performance.now();
+  bfade = setInterval(() => {
+    const k = 1 - (performance.now() - t0) / 1600;
+    if (k <= 0){ clearInterval(bfade); BGM.volume = 0; BGM.pause(); return; }
+    BGM.volume = v0 * k;
+  }, 60);
+}
+
+/* 歌词跟着音乐走，音乐被拦就跟着时钟走 */
+function startLyrics(){
+  const el = $("#lyr");
+  lyClock = performance.now();
+  let cur = -1;
+  clearInterval(lyTick);
+  lyTick = setInterval(() => {
+    const t = (!BGM.paused && BGM.currentTime > 0)
+      ? BGM.currentTime
+      : (performance.now() - lyClock) / 1000;
+    let k = -1;
+    for (let i = 0; i < LYRICS.length; i++) if (t >= LYRICS[i].t) k = i;
+    if (k === cur) return;
+    cur = k;
+    el.style.opacity = 0;
+    if (k >= 0) setTimeout(() => { el.textContent = LYRICS[k].x; el.style.opacity = 1; }, 200);
+    else el.textContent = "";
+  }, 120);
+}
+
+/* ── 字幕 ── */
+let skipFn = null;function wait(ms){
+  return new Promise(res => {
+    const id = setTimeout(() => { skipFn = null; res(); }, ms);
+    skipFn = () => { clearTimeout(id); skipFn = null; res(); };
+  });
+}
+const holdFor = t => Math.min(2000, Math.max(1000, 550 + [...t].length * 78));
+
+/* 一句一句写上去 */
+function write(text, small){
+  const sub = $("#sub");
+  sub.className = "sub" + (small ? " small" : "");
+  sub.innerHTML = "";
+  [...text].forEach((c, i) => {
+    const s = document.createElement("span");
+    s.className = "ch";
+    s.textContent = c === " " ? "\u00A0" : c;
+    s.style.transitionDelay = (i * 66) + "ms";
+    sub.appendChild(s);
+  });
+  void sub.offsetWidth;
+  requestAnimationFrame(() => {
+    sub.querySelectorAll(".ch").forEach(e => e.classList.add("on"));
+  });
+}
+
+async function playFilm(){
+  const film = $("#film"), sub = $("#sub"), prog = $("#fprog");
+  const IN = 700, OUT = 600, GAP = 110;
+  const total = FILM.reduce((a, l) => a + IN + holdFor(l.t) + OUT + GAP, 0) + 900;
+
+  film.classList.add("on");
+  await wait(750);
+  startBGM();
+  startLyrics();
+
+  prog.style.transition = "none";
+  prog.style.width = "0%";
+  requestAnimationFrame(() => {
+    prog.style.transition = `width ${total}ms linear`;
+    prog.style.width = "100%";
+  });
+
+  for (const line of FILM){
+    write(line.t, !!line.small);
+    await wait(IN);
+    await wait(holdFor(line.t));
+    sub.style.opacity = "0";
+    await wait(OUT);
+    await wait(GAP);
+    sub.style.opacity = "1";
+    sub.innerHTML = "";
+  }
+
+  await wait(900);
+  clearInterval(lyTick);
+  $("#lyr").style.opacity = 0;
+  stopBGM();
+  film.classList.remove("on");
+  await wait(950);
+  unlock();
+}
+
+/* ── 揭图 ── */
+function unlock(){
+  window.scrollTo(0, 0);
+  show("#s-done");
+  const f = $("#frame");
+  requestAnimationFrame(() => setTimeout(() => f.classList.add("revealed"), 80));
+}
+
+$("#start").addEventListener("click", () => {
+  if (document.fonts && document.fonts.load) document.fonts.load('20px "Hand"');
+  idx = 0;
+  render();
+  show("#s-quiz");
+});
+
+/* 轻触字幕区，跳到下一句 */
+$("#film").addEventListener("click", () => { if (skipFn) skipFn(); });
+</script>
+</body>
+</html>
